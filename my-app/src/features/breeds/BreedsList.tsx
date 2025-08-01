@@ -19,11 +19,9 @@ function BreedsList() {
     dispatch(fetchBreeds(currentPage));
   }, [dispatch, currentPage]);
 
-
   const handlePageChange = (page: number) => {
-  setCurrentPage(page);
-};
-
+    setCurrentPage(page);
+  };
 
   return (
     <div className="container mt-4">
@@ -58,13 +56,12 @@ function BreedsList() {
       </div>
 
       {/* Tái sử dụng PaginationControls */}
-    <PaginationControls
-  currentPage={pagination?.current || 1}
-  lastPage={Math.ceil((pagination?.records || 10) / 10)}
-  onPageChange={handlePageChange}
-  loading={loading}
-/>
-
+      <PaginationControls
+        currentPage={pagination?.current || 1}
+        lastPage={Math.ceil((pagination?.records || 10) / 10)}
+        onPageChange={handlePageChange}
+        loading={loading}
+      />
     </div>
   );
 }

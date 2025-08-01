@@ -6,23 +6,33 @@ interface BreedAttributes {
   description?: string;
   hypoallergenic?: boolean;
   life?: { min: number; max: number };
+  male_weight?: { min: number; max: number };
   female_weight?: { min: number; max: number };
+}
+
+interface BreedRelationships {
+  group?: {
+    id: string;
+    type: string;
+  };
 }
 
 export interface Breed {
   id: string;
   attributes: BreedAttributes;
+  relationships?: BreedRelationships;
 }
 
 // Metadata phân trang
 interface PaginationMeta {
   current: number;
   records: number;
+  total_pages: number;
   next?: string;
   last?: string;
 }
 
-// Kiểu state Redux
+// Redux state
 interface BreedsState {
   list: Breed[];
   loading: boolean;
@@ -30,7 +40,7 @@ interface BreedsState {
   pagination: PaginationMeta | null;
 }
 
-// State khởi tạo
+// Initial state
 const initialState: BreedsState = {
   list: [],
   loading: false,
@@ -38,24 +48,22 @@ const initialState: BreedsState = {
   pagination: null,
 };
 
-// Thunk fetch API (chỉ lấy 10 mục mỗi trang)
+// Async thunk
 export const fetchBreeds = createAsyncThunk(
   'breeds/fetchBreeds',
   async (page: number = 1, { rejectWithValue }) => {
     try {
-      const response = await fetch(`https://dogapi.dog/api/v2/breeds?page[number]=${page}&page[size]=10`);
-      if (!response.ok) {
-        return rejectWithValue('Failed to fetch breeds');
-      }
-      const data = await response.json();
+      const res = await fetch(`https://dogapi.dog/api/v2/breeds?page[number]=${page}&page[size]=10`);
+      if (!res.ok) return rejectWithValue('Failed to fetch breeds');
+      const data = await res.json();
       return data;
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Network error');
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Network error');
     }
   }
 );
 
-// Slice Redux
+// Slice
 const breedsSlice = createSlice({
   name: 'breeds',
   initialState,
@@ -68,10 +76,22 @@ const breedsSlice = createSlice({
       })
       .addCase(fetchBreeds.fulfilled, (state, action: PayloadAction<any>) => {
         state.loading = false;
-        state.list = action.payload.data;
+
+        // Đảm bảo mapping đúng
+        state.list = action.payload.data.map((item: any) => ({
+          id: item.id,
+          attributes: item.attributes,
+          relationships: {
+            group: item.relationships?.group?.data || undefined,
+          },
+        }));
+
+        const pagination = action.payload.meta?.pagination;
+
         state.pagination = {
-          current: action.payload.meta.pagination.current,
-          records: action.payload.meta.pagination.records,
+          current: pagination?.current || 1,
+          records: pagination?.records || 0,
+          total_pages: pagination?.total_pages || 1,
           next: action.payload.links?.next,
           last: action.payload.links?.last,
         };
@@ -80,7 +100,7 @@ const breedsSlice = createSlice({
         state.loading = false;
         state.error = (action.payload as string) || 'Something went wrong';
       });
-  }
+  },
 });
 
 export default breedsSlice.reducer;
